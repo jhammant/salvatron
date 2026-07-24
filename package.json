@@ -1,0 +1,26 @@
+{
+  "name": "salvatron",
+  "version": "0.1.0",
+  "description": "The salvage bot for AI-assisted development. Inventories your graveyard of side projects and tells you what's worth rescuing.",
+  "type": "module",
+  "bin": {
+    "salvatron": "./src/cli.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "cli",
+    "git",
+    "projects",
+    "inventory",
+    "salvage",
+    "ai",
+    "developer-tools"
+  ],
+  "author": "Jon Hammant",
+  "license": "MIT"
+}
