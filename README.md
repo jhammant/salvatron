@@ -67,8 +67,15 @@ node src/cli.mjs report ~/dev
 | `salvatron report [dir]` | The full digest |
 
 Options: `--json` for machine-readable output, `-n <count>` to limit lists,
-`--stale <days>` to bound ship-candidate staleness (default 120),
-`--tyrant` to let Salvatron say what it really thinks.
+`--stale <days>` to bound ship-candidate staleness (default 120).
+
+### `--tyrant`
+
+Appends Salvatron's in-character commentary to `report` — the `⏣` lines in
+the example above, roasting your project count, uncommitted work, and
+version-control hygiene. **Purely cosmetic**: it changes no behavior, reads
+nothing extra, and deletes nothing. It exists because the canonical Salvatron
+was a tyrant, and this one is only allowed to be one out loud.
 
 ## How it works
 

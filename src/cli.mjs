@@ -30,7 +30,7 @@ Options:
   --json          Machine-readable output
   -n <count>      Limit list length (default 10)
   --stale <days>  Max staleness for ship candidates (default 120)
-  --tyrant        Let Salvatron say what it really thinks
+  --tyrant        Add judgmental in-character commentary to report (cosmetic only)
   -h, --help      This help
 
 [dir] defaults to the current directory. Point it at the graveyard:
