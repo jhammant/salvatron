@@ -37,6 +37,18 @@ export function dirtyRepos(projects) {
     .sort((a, b) => b.dirty - a.dirty);
 }
 
+// Cleanup candidates: nothing modified in ages. Shown with last-accessed so
+// you can tell truly dead (old atime too) from consulted-but-not-edited.
+export function staleProjects(projects, { minStaleDays = 180 } = {}) {
+  return projects
+    .filter((p) => p.staleDays >= minStaleDays)
+    .sort(
+      (a, b) =>
+        (b.accessDays ?? -1) - (a.accessDays ?? -1) ||
+        b.staleDays - a.staleDays,
+    );
+}
+
 // Directories with no version control at all.
 export function unversioned(projects) {
   return projects

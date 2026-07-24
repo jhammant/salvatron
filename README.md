@@ -50,6 +50,7 @@ node src/cli.mjs report ~/dev
 | `salvatron scan [dir]` | Inventory: git state, staleness, risk counts |
 | `salvatron dirty [dir]` | Repos with uncommitted work, most at-risk first |
 | `salvatron ship [dir]` | Unpublished projects closest to launch, and what each still needs |
+| `salvatron stale [dir]` | Cleanup candidates: unmodified for ages, with last-*accessed* times so you can tell truly dead from consulted-but-not-edited |
 | `salvatron report [dir]` | The full digest |
 
 Options: `--json` for machine-readable output, `-n <count>` to limit lists,

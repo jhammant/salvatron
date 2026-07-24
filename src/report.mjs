@@ -1,5 +1,5 @@
 import { stats } from './scan.mjs';
-import { shipCandidates, dirtyRepos, unversioned } from './ship.mjs';
+import { shipCandidates, dirtyRepos, unversioned, staleProjects } from './ship.mjs';
 
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
 const c = (code, s) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
@@ -50,6 +50,33 @@ export function renderShip(projects, opts) {
     const needs = p.missing.length ? `needs: ${p.missing.join(', ')}` : 'ready';
     lines.push(`  ${green(String(p.score).padStart(3))}/100  ${bold(p.name.padEnd(28))} ${dim(age(p).padEnd(9))} ${yellow(needs)}`);
   }
+  return lines.join('\n');
+}
+
+function accessAge(p) {
+  if (p.accessDays == null) return 'accessed: unknown';
+  if (p.accessDays === 0) return 'accessed today';
+  if (p.accessDays < 30) return `accessed ${p.accessDays}d ago`;
+  if (p.accessDays < 365) return `accessed ${Math.round(p.accessDays / 30)}mo ago`;
+  return `accessed ${(p.accessDays / 365).toFixed(1)}y ago`;
+}
+
+export function renderStale(projects, { minStaleDays = 180, limit = 20 } = {}) {
+  const stale = staleProjects(projects, { minStaleDays });
+  if (!stale.length) return green(`Nothing untouched for ${minStaleDays}+ days. Impressive, or a lie.`);
+  const lines = [
+    bold(`CLEANUP CANDIDATES — no changes in ${minStaleDays}+ days, least-recently-accessed first`),
+    '',
+  ];
+  for (const p of stale.slice(0, limit)) {
+    const vcs = p.git ? (p.remote ? green('pushed') : yellow('local-only')) : red('no git');
+    lines.push(
+      `  ${bold(p.name.padEnd(28))} modified ${age(p).padEnd(9)} ${dim(accessAge(p).padEnd(19))} ${vcs}`,
+    );
+  }
+  if (stale.length > limit) lines.push(dim(`  … and ${stale.length - limit} more (use -n)`));
+  lines.push('');
+  lines.push(dim('local-only / no git means deleting it deletes the only copy. Archive first.'));
   return lines.join('\n');
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { scanDir, stats } from './scan.mjs';
-import { shipCandidates, dirtyRepos, unversioned } from './ship.mjs';
-import { renderScan, renderDirty, renderShip, renderReport } from './report.mjs';
+import { shipCandidates, dirtyRepos, unversioned, staleProjects } from './ship.mjs';
+import { renderScan, renderDirty, renderShip, renderStale, renderReport } from './report.mjs';
 
 const HELP = `salvatron — the salvage bot for AI-assisted development
 
@@ -11,6 +11,7 @@ Commands:
   scan     Inventory every project: git state, staleness, risk counts
   dirty    Repos with uncommitted work, most at-risk first
   ship     Unpublished projects closest to launch, with what's missing
+  stale    Cleanup candidates: untouched for ages, with last-accessed times
   report   The full digest (scan + dirty + ship + unversioned)
 
 Options:
@@ -69,6 +70,10 @@ switch (args.command) {
   case 'ship':
     if (args.json) console.log(JSON.stringify(shipCandidates(projects, opts), null, 2));
     else console.log(renderShip(projects, opts));
+    break;
+  case 'stale':
+    if (args.json) console.log(JSON.stringify(staleProjects(projects, { minStaleDays: args.maxStaleDays }), null, 2));
+    else console.log(renderStale(projects, { minStaleDays: args.maxStaleDays, limit: args.limit }));
     break;
   case 'report':
     if (args.json) {

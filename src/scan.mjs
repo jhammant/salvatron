@@ -24,6 +24,38 @@ function hasReadme(dir) {
   }
 }
 
+// Newest atime across a sample of the project's files (top level + one down).
+// stat() reads metadata without touching atime, so scanning stays read-only.
+// Caveat: indexers/backup tools also bump atime, so treat as "no later than".
+function newestAtimeMs(dir) {
+  let newest = 0;
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  let checked = 0;
+  for (const e of entries) {
+    if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+    const p = join(dir, e.name);
+    try {
+      const st = statSync(p);
+      if (!e.isDirectory()) newest = Math.max(newest, st.atimeMs);
+      else if (checked < 30) {
+        for (const f of readdirSync(p).slice(0, 20)) {
+          try {
+            newest = Math.max(newest, statSync(join(p, f)).atimeMs);
+          } catch {}
+        }
+      }
+      checked++;
+    } catch {}
+    if (checked >= 60) break;
+  }
+  return newest || null;
+}
+
 export function scanProject(path, { now = Date.now() } = {}) {
   const p = {
     name: basename(path),
@@ -58,6 +90,10 @@ export function scanProject(path, { now = Date.now() } = {}) {
   p.staleDays = p.lastActivity
     ? Math.max(0, Math.floor((now - Date.parse(p.lastActivity)) / MS_PER_DAY))
     : Infinity;
+
+  const atime = newestAtimeMs(path);
+  p.lastAccessed = atime ? new Date(atime).toISOString().slice(0, 10) : null;
+  p.accessDays = atime ? Math.max(0, Math.floor((now - atime) / MS_PER_DAY)) : null;
 
   return p;
 }

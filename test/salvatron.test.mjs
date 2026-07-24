@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { scanDir, scanProject, stats } from '../src/scan.mjs';
-import { shipScore, shipCandidates, dirtyRepos, unversioned } from '../src/ship.mjs';
+import { shipScore, shipCandidates, dirtyRepos, unversioned, staleProjects } from '../src/ship.mjs';
 
 function sh(cwd, cmd, cmdArgs) {
   execFileSync(cmd, cmdArgs, { cwd, stdio: 'ignore' });
@@ -87,6 +87,30 @@ test('salvatron end-to-end on a fixture graveyard', (t) => {
   assert.equal(dirtyRepos(projects).length, 1);
   assert.equal(unversioned(projects).length, 1);
   assert.equal(unversioned(projects)[0].name, 'loose');
+});
+
+test('lastAccessed is populated and staleProjects filters by modification age', (t) => {
+  const root = makeGraveyard();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+
+  const projects = scanDir(root);
+  for (const p of projects) {
+    assert.ok(p.lastAccessed, `${p.name} has a lastAccessed date`);
+    assert.equal(typeof p.accessDays, 'number');
+    assert.ok(p.accessDays <= 1, 'fixture files were just created, so accessed now');
+  }
+
+  // Fixtures are brand new — nothing should qualify as stale.
+  assert.equal(staleProjects(projects, { minStaleDays: 180 }).length, 0);
+
+  // Fabricated old projects rank least-recently-accessed first.
+  const old = [
+    { name: 'deadest', staleDays: 900, accessDays: 800 },
+    { name: 'consulted', staleDays: 900, accessDays: 5 },
+    { name: 'fresh', staleDays: 10, accessDays: 1 },
+  ];
+  const stale = staleProjects(old, { minStaleDays: 180 });
+  assert.deepEqual(stale.map((p) => p.name), ['deadest', 'consulted']);
 });
 
 test('scanProject survives a repo with no commits', (t) => {
