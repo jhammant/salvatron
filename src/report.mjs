@@ -80,6 +80,40 @@ export function renderStale(projects, { minStaleDays = 180, limit = 20 } = {}) {
   return lines.join('\n');
 }
 
+export function renderAha(moments) {
+  if (!moments.length) return dim('No ah-ha moments this sweep. The graveyard keeps its secrets.');
+  const lines = [bold('AH-HA'), ''];
+  for (const m of moments) lines.push(`  ${yellow('◉')} ${m}`);
+  return lines.join('\n');
+}
+
+export function renderSnapshot(diff, ledger) {
+  const total = Object.keys(ledger.projects).length;
+  const dead = Object.values(ledger.projects).filter((p) => p.gone).length;
+  const lines = [bold('SNAPSHOT RECORDED'), ''];
+  const row = (label, names, color = yellow) =>
+    names.length && lines.push(`  ${color(String(names.length).padStart(3))}  ${label}: ${names.slice(0, 8).join(', ')}${names.length > 8 ? ', …' : ''}`);
+  row('new since last snapshot', diff.added, green);
+  row('returned from the dead', diff.returned, green);
+  row('gone — now tombstoned, still remembered', diff.gone, red);
+  row('newly dirty', diff.newlyDirty, red);
+  row('cleaned up', diff.cleaned, green);
+  if (lines.length === 2) lines.push(dim('  No changes since last snapshot.'));
+  lines.push('');
+  lines.push(dim(`  Ledger: ${total} projects remembered, ${dead} tombstones.`));
+  return lines.join('\n');
+}
+
+export function renderGraveyard(dead) {
+  if (!dead.length) return dim('No tombstones yet. Nothing you deleted has been forgotten — because you have deleted nothing.');
+  const lines = [bold(`GRAVEYARD — ${dead.length} projects remembered after deletion`), ''];
+  for (const p of dead) {
+    const recover = p.remoteUrl ? dim(p.remoteUrl) : red('no remote — it is truly gone');
+    lines.push(`  ${bold(p.name.padEnd(28))} died ${p.goneSince ?? '?'}  ${recover}`);
+  }
+  return lines.join('\n');
+}
+
 export function tyrantLines(projects) {
   const s = stats(projects);
   const lines = [];
@@ -91,7 +125,7 @@ export function tyrantLines(projects) {
   return lines.map((l) => red(bold(`  ⏣ ${l}`))).join('\n');
 }
 
-export function renderReport(projects, { tyrant = false, ...opts } = {}) {
+export function renderReport(projects, { tyrant = false, ahas = [], ...opts } = {}) {
   const parts = [
     renderScan(projects),
     '',
@@ -99,6 +133,10 @@ export function renderReport(projects, { tyrant = false, ...opts } = {}) {
     '',
     renderShip(projects, opts),
   ];
+  if (ahas.length) {
+    parts.push('');
+    parts.push(renderAha(ahas.slice(0, 5)));
+  }
   const unv = unversioned(projects);
   if (unv.length) {
     parts.push('');

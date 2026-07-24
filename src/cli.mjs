@@ -1,7 +1,13 @@
 #!/usr/bin/env node
+import { resolve } from 'node:path';
 import { scanDir, stats } from './scan.mjs';
 import { shipCandidates, dirtyRepos, unversioned, staleProjects } from './ship.mjs';
-import { renderScan, renderDirty, renderShip, renderStale, renderReport } from './report.mjs';
+import { loadLedger, saveLedger, updateLedger, tombstones } from './ledger.mjs';
+import { ahaMoments } from './aha.mjs';
+import {
+  renderScan, renderDirty, renderShip, renderStale, renderReport,
+  renderAha, renderSnapshot, renderGraveyard,
+} from './report.mjs';
 
 const HELP = `salvatron — the salvage bot for AI-assisted development
 
@@ -12,7 +18,10 @@ Commands:
   dirty    Repos with uncommitted work, most at-risk first
   ship     Unpublished projects closest to launch, with what's missing
   stale    Cleanup candidates: untouched for ages, with last-accessed times
-  report   The full digest (scan + dirty + ship + unversioned)
+  aha      Insights: duplicate-idea clusters, near-misses, rebuild echoes
+  snapshot Record this sweep in the ledger; diff vs last time (writes state)
+  graveyard Projects deleted from disk but remembered in the ledger
+  report   The full digest (scan + dirty + ship + unversioned + ah-has)
 
 Options:
   --json          Machine-readable output
@@ -75,6 +84,26 @@ switch (args.command) {
     if (args.json) console.log(JSON.stringify(staleProjects(projects, { minStaleDays: args.maxStaleDays }), null, 2));
     else console.log(renderStale(projects, { minStaleDays: args.maxStaleDays, limit: args.limit }));
     break;
+  case 'aha': {
+    const moments = ahaMoments(projects, tombstones(loadLedger()));
+    if (args.json) console.log(JSON.stringify(moments, null, 2));
+    else console.log(renderAha(moments));
+    break;
+  }
+  case 'snapshot': {
+    const ledger = loadLedger();
+    const diff = updateLedger(ledger, projects, resolve(args.dir));
+    const path = saveLedger(ledger);
+    if (args.json) console.log(JSON.stringify({ diff, ledger: path }, null, 2));
+    else console.log(renderSnapshot(diff, ledger));
+    break;
+  }
+  case 'graveyard': {
+    const dead = tombstones(loadLedger());
+    if (args.json) console.log(JSON.stringify(dead, null, 2));
+    else console.log(renderGraveyard(dead));
+    break;
+  }
   case 'report':
     if (args.json) {
       console.log(JSON.stringify({
@@ -83,7 +112,11 @@ switch (args.command) {
         shipCandidates: shipCandidates(projects, opts),
         unversioned: unversioned(projects),
       }, null, 2));
-    } else console.log(renderReport(projects, { tyrant: args.tyrant, ...opts }));
+    } else console.log(renderReport(projects, {
+      tyrant: args.tyrant,
+      ahas: ahaMoments(projects, tombstones(loadLedger())),
+      ...opts,
+    }));
     break;
   default:
     console.error(`salvatron: unknown command '${args.command}'\n`);

@@ -75,6 +75,7 @@ export function scanProject(path, { now = Date.now() } = {}) {
     const status = git(path, ['status', '--porcelain']);
     p.dirty = status ? status.split('\n').filter(Boolean).length : 0;
     p.remote = Boolean(git(path, ['remote']));
+    p.remoteUrl = p.remote ? git(path, ['remote', 'get-url', 'origin']) : null;
     p.commits = Number(git(path, ['rev-list', '--count', 'HEAD'])) || 0;
     p.lastActivity = git(path, ['log', '-1', '--format=%cs']) || null;
   }

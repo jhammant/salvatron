@@ -126,6 +126,71 @@ test('scanProject survives a repo with no commits', (t) => {
   assert.ok(p.lastActivity, 'falls back to directory mtime');
 });
 
+test('ledger remembers deleted projects as tombstones', (t) => {
+  const root = makeGraveyard();
+  const home = mkdtempSync(join(tmpdir(), 'salvatron-home-'));
+  t.after(() => {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  const { loadLedger, saveLedger, updateLedger, tombstones } = awaitImportLedger();
+  process.env.SALVATRON_HOME = home;
+
+  const ledger = loadLedger();
+  const first = updateLedger(ledger, scanDir(root), root);
+  assert.equal(first.added.length, 3);
+  saveLedger(ledger);
+
+  rmSync(join(root, 'dirty'), { recursive: true, force: true });
+
+  const again = loadLedger();
+  const second = updateLedger(again, scanDir(root), root);
+  assert.deepEqual(second.gone, ['dirty']);
+
+  const dead = tombstones(again);
+  assert.equal(dead.length, 1);
+  assert.equal(dead[0].name, 'dirty');
+  assert.ok(dead[0].goneSince, 'tombstone records when it died');
+  assert.equal(dead[0].dirty, 2, 'final state is preserved');
+
+  delete process.env.SALVATRON_HOME;
+});
+
+test('aha finds clusters, near-misses and echoes', async () => {
+  const { clusters, nearMisses, echoes } = await import('../src/aha.mjs');
+
+  const mk = (name, extra = {}) => ({
+    name, path: `/x/${name}`, git: true, remote: false, dirty: 0, commits: 9,
+    hasReadme: true, hasLicense: true, hasTests: true, hasManifest: true,
+    staleDays: 5, ...extra,
+  });
+
+  const projects = [
+    mk('glasto'), mk('glasto-infra', { staleDays: 400 }), mk('GlastoBot', { staleDays: 400 }),
+    mk('almost-done', { staleDays: 90 }),
+    mk('scraper-medic'),
+    mk('gym-scraper', { staleDays: 2000 }),
+  ];
+
+  const c = clusters(projects);
+  assert.equal(c[0].token, 'glasto');
+  assert.equal(c[0].names.length, 3);
+
+  const near = nearMisses(projects);
+  assert.ok(near.some((p) => p.name === 'almost-done'));
+
+  const e = echoes(projects, [{ name: 'scraper-old', path: '/dead/scraper-old', gone: true }]);
+  assert.ok(e.some((x) => x.fresh === 'scraper-medic' && x.echo === 'gym-scraper'));
+});
+
+// node:test runs test files as ESM; a tiny sync-looking helper keeps the
+// tombstone test readable while the import stays at module scope.
+import * as ledgerMod from '../src/ledger.mjs';
+function awaitImportLedger() {
+  return ledgerMod;
+}
+
 test('CLI runs and produces the report', (t) => {
   const root = makeGraveyard();
   t.after(() => rmSync(root, { recursive: true, force: true }));

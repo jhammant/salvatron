@@ -51,6 +51,9 @@ node src/cli.mjs report ~/dev
 | `salvatron dirty [dir]` | Repos with uncommitted work, most at-risk first |
 | `salvatron ship [dir]` | Unpublished projects closest to launch, and what each still needs |
 | `salvatron stale [dir]` | Cleanup candidates: unmodified for ages, with last-*accessed* times so you can tell truly dead from consulted-but-not-edited |
+| `salvatron aha [dir]` | Insights: duplicate-idea clusters, near-misses, "you're rebuilding something you already built" echoes |
+| `salvatron snapshot [dir]` | Record this sweep in the ledger and diff against last time |
+| `salvatron graveyard` | Projects deleted from disk but remembered in the ledger |
 | `salvatron report [dir]` | The full digest |
 
 Options: `--json` for machine-readable output, `-n <count>` to limit lists,
@@ -79,6 +82,13 @@ leaves your machine.
   tree) so the 80%-done ones get rescued instead of rebuilt.
 - **It never deletes anything.** Salvatron recommends; you decide. We all saw
   what happens when the salvage bot gets unilateral power.
+- **Cleanup without amnesia.** `snapshot` keeps a ledger in `~/.salvatron/`;
+  when a project disappears from disk it becomes a tombstone — name, final
+  state, and remote URL remembered forever. Age things out; forget nothing.
+
+Everything except `snapshot` is strictly read-only: directory listings, file
+stats, and read-only git queries. No file contents are read, nothing is
+modified, and nothing touches the network.
 
 Inspired by a certain garbage-dimension warden from a certain interdimensional
 cartoon (S8E9). This project is not affiliated with it in any way.
