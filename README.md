@@ -27,6 +27,15 @@ SHIP CANDIDATES — closest to launch, not yet published
    85/100  sideband            17d ago   needs: 5+ commits
    ...
 
+AH-HA
+
+  ◉ 8 projects orbit "claude": claude-history-cloud, claude-history-mcp,
+    ClaudeHistoryMCP, … One idea — which is canonical?
+  ◉ LocalRealtimeChat is 90/100 shippable (needs: LICENSE) and has sat
+    still for 3 months.
+  ◉ scraper-medic echoes gym-scraper, untouched for 6+ months. Salvage
+    before you rebuild.
+
   ⏣ 263 projects. This is not a dev directory, it is a garbage dimension.
   ⏣ ASSESSMENT COMPLETE. REPORTING NOTHING TO RICK.
 ```
@@ -65,10 +74,14 @@ Options: `--json` for machine-readable output, `-n <count>` to limit lists,
 
 ```mermaid
 flowchart LR
-    A["~/dev<br>one dir per project"] --> B["scan<br>git state · staleness<br>README / tests / LICENSE"]
-    B --> C["dirty<br>uncommitted work,<br>most at risk first"]
-    B --> D["ship<br>distance-to-shippable<br>score + what's missing"]
-    B --> E["report<br>full digest<br>(+ tyrant mode)"]
+    A["~/dev<br>one dir per project"] --> B["scan<br>git state · staleness<br>last-accessed · README/tests"]
+    B --> C["dirty · ship · stale<br>risk + readiness views"]
+    B --> D["aha<br>clusters · echoes<br>near-misses"]
+    B --> E["snapshot"]
+    E --> F[("ledger<br>~/.salvatron")]
+    F --> D
+    F --> G["graveyard<br>the remembered dead"]
+    H["archive<br>move aside, never forget"] --> F
 ```
 
 Pure filesystem + git plumbing. No index, no daemon, no network, nothing
