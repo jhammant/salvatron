@@ -102,7 +102,8 @@ export function scanProject(path, { now = Date.now() } = {}) {
 export function scanDir(root, opts = {}) {
   const abs = resolve(root);
   const entries = readdirSync(abs, { withFileTypes: true }).filter(
-    (e) => e.isDirectory() && !e.name.startsWith('.'),
+    (e) =>
+      e.isDirectory() && !e.name.startsWith('.') && e.name !== 'SalvatronArchive',
   );
 
   const projects = [];

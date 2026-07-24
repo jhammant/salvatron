@@ -53,7 +53,8 @@ node src/cli.mjs report ~/dev
 | `salvatron stale [dir]` | Cleanup candidates: unmodified for ages, with last-*accessed* times so you can tell truly dead from consulted-but-not-edited |
 | `salvatron aha [dir]` | Insights: duplicate-idea clusters, near-misses, "you're rebuilding something you already built" echoes |
 | `salvatron snapshot [dir]` | Record this sweep in the ledger and diff against last time |
-| `salvatron graveyard` | Projects deleted from disk but remembered in the ledger |
+| `salvatron archive <path…>` | Move projects into a `SalvatronArchive/` dir beside them; the ledger marks them archived (never confused with dead) and future scans skip the archive |
+| `salvatron graveyard` | Projects deleted or archived, as remembered in the ledger |
 | `salvatron report [dir]` | The full digest |
 
 Options: `--json` for machine-readable output, `-n <count>` to limit lists,

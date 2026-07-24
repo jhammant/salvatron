@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -155,6 +155,36 @@ test('ledger remembers deleted projects as tombstones', (t) => {
   assert.equal(dead[0].dirty, 2, 'final state is preserved');
 
   delete process.env.SALVATRON_HOME;
+});
+
+test('archive moves projects aside and the ledger never tombstones them', (t) => {
+  const root = makeGraveyard();
+  const home = mkdtempSync(join(tmpdir(), 'salvatron-home-'));
+  t.after(() => {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+    delete process.env.SALVATRON_HOME;
+  });
+
+  const { loadLedger, saveLedger, updateLedger, tombstones, archiveProjects, archived } = ledgerMod;
+  process.env.SALVATRON_HOME = home;
+
+  const ledger = loadLedger();
+  updateLedger(ledger, scanDir(root), root);
+
+  const { moved, skipped } = archiveProjects(ledger, [join(root, 'loose'), join(root, 'nonexistent')]);
+  assert.equal(moved.length, 1);
+  assert.equal(skipped[0].reason, 'not found');
+  assert.ok(existsSync(join(root, 'SalvatronArchive', 'loose')), 'moved into SalvatronArchive');
+  saveLedger(ledger);
+
+  // Next sweep: loose is off the scan (archive dir is excluded) but must be
+  // recorded as archived, not dead.
+  const diff = updateLedger(ledger, scanDir(root), root);
+  assert.deepEqual(diff.gone, [], 'archived projects are not tombstoned');
+  assert.equal(tombstones(ledger).length, 0);
+  assert.equal(archived(ledger)[0].name, 'loose');
+  assert.equal(scanDir(root).length, 2, 'SalvatronArchive itself is not scanned');
 });
 
 test('aha finds clusters, near-misses and echoes', async () => {

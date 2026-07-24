@@ -104,13 +104,23 @@ export function renderSnapshot(diff, ledger) {
   return lines.join('\n');
 }
 
-export function renderGraveyard(dead) {
-  if (!dead.length) return dim('No tombstones yet. Nothing you deleted has been forgotten — because you have deleted nothing.');
-  const lines = [bold(`GRAVEYARD — ${dead.length} projects remembered after deletion`), ''];
-  for (const p of dead) {
-    const recover = p.remoteUrl ? dim(p.remoteUrl) : red('no remote — it is truly gone');
-    lines.push(`  ${bold(p.name.padEnd(28))} died ${p.goneSince ?? '?'}  ${recover}`);
+export function renderGraveyard(dead, resting = []) {
+  const lines = [];
+  if (dead.length) {
+    lines.push(bold(`GRAVEYARD — ${dead.length} projects remembered after deletion`), '');
+    for (const p of dead) {
+      const recover = p.remoteUrl ? dim(p.remoteUrl) : red('no remote — it is truly gone');
+      lines.push(`  ${bold(p.name.padEnd(28))} died ${p.goneSince ?? '?'}  ${recover}`);
+    }
   }
+  if (resting.length) {
+    if (lines.length) lines.push('');
+    lines.push(bold(`ARCHIVED — ${resting.length} projects aged out, still on disk`), '');
+    for (const p of resting) {
+      lines.push(`  ${bold(p.name.padEnd(28))} archived ${p.archivedOn ?? '?'}  ${dim(p.archivedTo ?? '')}`);
+    }
+  }
+  if (!lines.length) return dim('No tombstones, nothing archived. Nothing has been forgotten — because nothing has left.');
   return lines.join('\n');
 }
 

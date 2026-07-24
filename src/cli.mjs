@@ -2,7 +2,9 @@
 import { resolve } from 'node:path';
 import { scanDir, stats } from './scan.mjs';
 import { shipCandidates, dirtyRepos, unversioned, staleProjects } from './ship.mjs';
-import { loadLedger, saveLedger, updateLedger, tombstones } from './ledger.mjs';
+import {
+  loadLedger, saveLedger, updateLedger, tombstones, archiveProjects, archived,
+} from './ledger.mjs';
 import { ahaMoments } from './aha.mjs';
 import {
   renderScan, renderDirty, renderShip, renderStale, renderReport,
@@ -20,7 +22,8 @@ Commands:
   stale    Cleanup candidates: untouched for ages, with last-accessed times
   aha      Insights: duplicate-idea clusters, near-misses, rebuild echoes
   snapshot Record this sweep in the ledger; diff vs last time (writes state)
-  graveyard Projects deleted from disk but remembered in the ledger
+  archive  Move projects into SalvatronArchive/ next to them (ledger remembers)
+  graveyard Projects deleted or archived, as remembered in the ledger
   report   The full digest (scan + dirty + ship + unversioned + ah-has)
 
 Options:
@@ -35,7 +38,7 @@ Options:
 `;
 
 function parseArgs(argv) {
-  const args = { command: null, dir: process.cwd(), json: false, tyrant: false, limit: 10, maxStaleDays: 120 };
+  const args = { command: null, paths: [], json: false, tyrant: false, limit: 10, maxStaleDays: 120 };
   const rest = [...argv];
   while (rest.length) {
     const a = rest.shift();
@@ -45,8 +48,9 @@ function parseArgs(argv) {
     else if (a === '-n') args.limit = Number(rest.shift()) || 10;
     else if (a === '--stale') args.maxStaleDays = Number(rest.shift()) || 120;
     else if (!args.command) args.command = a;
-    else args.dir = a;
+    else args.paths.push(a);
   }
+  args.dir = args.paths[0] ?? process.cwd();
   return args;
 }
 
@@ -57,12 +61,15 @@ if (args.help || !args.command) {
   process.exit(args.help ? 0 : 1);
 }
 
-let projects;
-try {
-  projects = scanDir(args.dir);
-} catch (err) {
-  console.error(`salvatron: cannot scan ${args.dir}: ${err.message}`);
-  process.exit(1);
+const NEEDS_SCAN = new Set(['scan', 'dirty', 'ship', 'stale', 'aha', 'snapshot', 'report']);
+let projects = [];
+if (NEEDS_SCAN.has(args.command)) {
+  try {
+    projects = scanDir(args.dir);
+  } catch (err) {
+    console.error(`salvatron: cannot scan ${args.dir}: ${err.message}`);
+    process.exit(1);
+  }
 }
 
 const opts = { limit: args.limit, maxStaleDays: args.maxStaleDays };
@@ -98,10 +105,26 @@ switch (args.command) {
     else console.log(renderSnapshot(diff, ledger));
     break;
   }
+  case 'archive': {
+    if (!args.paths.length) {
+      console.error('salvatron: archive needs at least one project path');
+      process.exit(1);
+    }
+    const ledger = loadLedger();
+    const result = archiveProjects(ledger, args.paths);
+    saveLedger(ledger);
+    if (args.json) console.log(JSON.stringify(result, null, 2));
+    else {
+      for (const m of result.moved) console.log(`archived  ${m.name} → ${m.to}`);
+      for (const s of result.skipped) console.log(`skipped   ${s.name} (${s.reason})`);
+      console.log(`\n${result.moved.length} archived. The ledger remembers them all.`);
+    }
+    break;
+  }
   case 'graveyard': {
-    const dead = tombstones(loadLedger());
-    if (args.json) console.log(JSON.stringify(dead, null, 2));
-    else console.log(renderGraveyard(dead));
+    const ledger = loadLedger();
+    if (args.json) console.log(JSON.stringify({ dead: tombstones(ledger), archived: archived(ledger) }, null, 2));
+    else console.log(renderGraveyard(tombstones(ledger), archived(ledger)));
     break;
   }
   case 'report':
