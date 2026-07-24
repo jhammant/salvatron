@@ -1,11 +1,12 @@
 # salvatron
 
-> The salvage bot for AI-assisted development. Inventories your graveyard of
-> side projects and tells you what's worth rescuing.
+AI-assisted coding means you start projects faster than you finish them. The
+result is a dev directory full of half-built, uncommitted, unpublished work —
+a personal garbage dimension, growing by the week.
 
-AI-assisted coding means you now start projects faster than you finish them.
-The result is a dev directory full of half-built, uncommitted, unpublished
-work — a personal garbage dimension. Salvatron patrols it.
+**Salvatron patrols it.** One command inventories every project, flags the
+uncommitted work you're about to lose, and ranks the almost-done ones worth
+shipping instead of rebuilding.
 
 ```bash
 salvatron report ~/dev --tyrant
@@ -54,6 +55,19 @@ node src/cli.mjs report ~/dev
 Options: `--json` for machine-readable output, `-n <count>` to limit lists,
 `--stale <days>` to bound ship-candidate staleness (default 120),
 `--tyrant` to let Salvatron say what it really thinks.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["~/dev<br>one dir per project"] --> B["scan<br>git state · staleness<br>README / tests / LICENSE"]
+    B --> C["dirty<br>uncommitted work,<br>most at risk first"]
+    B --> D["ship<br>distance-to-shippable<br>score + what's missing"]
+    B --> E["report<br>full digest<br>(+ tyrant mode)"]
+```
+
+Pure filesystem + git plumbing. No index, no daemon, no network, nothing
+leaves your machine.
 
 ## Why
 
